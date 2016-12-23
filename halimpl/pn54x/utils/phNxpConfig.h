@@ -38,7 +38,9 @@
 
 #ifndef __CONFIG_H
 #define __CONFIG_H
-
+#ifndef NXP_NFCC_FEATURES_H
+#include "NXP_NFCC_Features.h"
+#endif
 #ifdef __cplusplus
 extern "C"
 {
@@ -88,6 +90,11 @@ int updateNxpConfigTimestamp();
 #define NAME_NXP_NFC_PROFILE_EXTN    "NXP_NFC_PROFILE_EXTN"
 #define NAME_NXP_CHINA_TIANJIN_RF_ENABLED  "NXP_CHINA_TIANJIN_RF_ENABLED"
 #define NAME_NXP_CHINA_BLK_NUM_CHK_ENABLE  "NXP_CN_TRANSIT_BLK_NUM_CHECK_ENABLE"
+#if(NXP_ESE_POWER_MODE==TRUE)
+#define NAME_NXP_ESE_POWER_DH_CONTROL         "NXP_ESE_POWER_DH_CONTROL"
+#define NAME_NXP_ESE_POWER_EXT_PMU            "NXP_ESE_POWER_EXT_PMU"
+#define NAME_NXP_ESE_POWER_DH_CONTROL_CFG_1   "NXP_ESE_POWER_DH_CONTROL_CFG_1"
+#endif
 #define NAME_NXP_SWP_SWITCH_TIMEOUT  "NXP_SWP_SWITCH_TIMEOUT"
 #define NAME_NXP_SWP_FULL_PWR_ON     "NXP_SWP_FULL_PWR_ON"
 #define NAME_NXP_CORE_RF_FIELD       "NXP_CORE_RF_FIELD"
@@ -97,6 +104,67 @@ int updateNxpConfigTimestamp();
 #define NAME_NXP_TYPEA_UICC_BAUD_RATE "NXP_TYPEA_UICC_BAUD_RATE"
 #define NAME_NXP_TYPEB_UICC_BAUD_RATE "NXP_TYPEB_UICC_BAUD_RATE"
 #define NAME_NXP_SET_CONFIG_ALWAYS "NXP_SET_CONFIG_ALWAYS"
+#if((NFC_NXP_CHIP_TYPE!=PN547C2) && (NXP_NFCC_ROUTING_BLOCK_BIT_PROP==TRUE))
+#define NAME_NXP_PROP_BLACKLIST_ROUTING "NXP_PROP_BLACKLIST_ROUTING"
+#endif
+#define NAME_NXP_WIREDMODE_RESUME_TIMEOUT  "NXP_WIREDMODE_RESUME_TIMEOUT"
+#define NAME_NXP_UICC_LISTEN_TECH_MASK      "UICC_LISTEN_TECH_MASK"
+#define NAME_NXP_HOST_LISTEN_TECH_MASK      "HOST_LISTEN_TECH_MASK"
+#if ((NFC_NXP_CHIP_TYPE == PN548C2) || (NFC_NXP_CHIP_TYPE == PN551))
+#define NAME_NXP_SVDD_SYNC_OFF_DELAY "NXP_SVDD_SYNC_OFF_DELAY"
+#endif
+#define NAME_NXP_RF_UPDATE_REQ        "NXP_RF_UPDATE_REQ"
+
+/**
+ *  @brief defines the different config files used.
+ */
+
+#define config_name_mtp         "libnfc-mtp_default.conf"
+#define config_name_mtp1        "libnfc-mtp_rf1.conf"
+#define config_name_mtp2        "libnfc-mtp_rf2.conf"
+#define config_name_qrd         "libnfc-qrd_default.conf"
+#define config_name_qrd1        "libnfc-qrd_rf1.conf"
+#define config_name_qrd2        "libnfc-qrd_rf2.conf"
+#define config_name_default     "libnfc-nxp_default.conf"
+
+/**
+ *  @brief defines the maximum length of the target name.
+ */
+
+#define MAX_SOC_INFO_NAME_LEN (15)
+
+/**
+ *  @brief Defines the type of hardware platform.
+ */
+
+#define QRD_HW_PLATFORM  "qrd"
+#define MTP_HW_PLATFORM  "mtp"
+
+/**
+ *  @brief Defines the path where the hardware platform details are present.
+ */
+
+#define SYSFS_HW_PLATFORM_PATH1  "/sys/devices/soc0/hw_platform"
+#define SYSFS_HW_PLATFORM_PATH2   "/sys/devices/system/soc/soc0/hw_platform"
+
+/**
+ *  @brief Defines the path where the soc_id details are present.
+ */
+
+#define SYSFS_SOCID_PATH1    "/sys/devices/soc0/soc_id"
+#define SYSFS_SOCID_PATH2    "/sys/devices/system/soc/soc0/id"
+
+/**
+ *  @brief Defines the maximum length of the config file name.
+ */
+
+#define MAX_DATA_CONFIG_PATH_LEN 64
+
+/**
+ *  @brief Defines whether debugging is enabled or disabled.
+ */
+
+#define DEBUG 0
 
 /* default configuration */
 #define default_storage_location "/data/nfc"
