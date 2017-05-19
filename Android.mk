@@ -56,7 +56,7 @@ else
 LOCAL_CFLAGS += -DNFC_NXP_ESE=FALSE
 endif
 
-ifeq ($(TARGET_PRODUCT), msm8998)
+ifeq ($(call is-board-platform-in-list,msm8909w msm8916 msm8994 msm8909 msm8996 msm8992 msm8952 msm8937 msm8953 msm8998),true)
 D_CFLAGS += -DNQ_NFC_DUAL_UICC=FALSE
 else
 D_CFLAGS += -DNQ_NFC_DUAL_UICC=TRUE
