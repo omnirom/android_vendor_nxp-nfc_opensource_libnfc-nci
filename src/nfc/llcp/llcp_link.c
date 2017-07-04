@@ -36,6 +36,8 @@
 #include "llcp_int.h"
 #include "llcp_defs.h"
 #include "nfc_int.h"
+#include "nfa_sys.h"
+#include "nfa_dm_int.h"
 
 
 const UINT16 llcp_link_rwt[15] =  /* RWT = (302us)*2**WT; 302us = 256*16/fc; fc = 13.56MHz */
@@ -454,14 +456,17 @@ void llcp_link_deactivate (UINT8 reason)
 
     llcp_cb.overall_tx_congested = FALSE;
     llcp_cb.overall_rx_congested = FALSE;
+    /* As per the LLCP test specification v1.2.00 for test case TC_LLC_TAR_BV_04
+     * the receiving LLC shall commence sending an LLC PDU to the remote
+     * LLC. So, after IUT receiving DISC PDU from LT(remote device), IUT shall send DISC PDU to LT.
+     * appl_dta_mode_flag condition is added to fulfill above requirement
+     */
 
-   /*As per the LLCP test specification v1.2.00 for test case TC_LLC_TAR_BV_04
-    * the receiving LLC shall commence sending an LLC PDU to the remote
-    * LLC. So, after IUT receiving DISC PDU from LT(remote device), IUT shall send DISC PDU to LT.
-    * appl_dta_mode_flag condition is added to fulfill above requirement*/
     if (  (reason == LLCP_LINK_FRAME_ERROR)
         ||(reason == LLCP_LINK_LOCAL_INITIATED)
-        || ((appl_dta_mode_flag) && (reason == LLCP_LINK_REMOTE_INITIATED) && (llcp_cb.lcb.is_initiator == FALSE)))
+        ||((appl_dta_mode_flag) && (reason == LLCP_LINK_REMOTE_INITIATED) && (llcp_cb.lcb.is_initiator == FALSE)
+        && ((nfa_dm_cb.eDtaMode & 0xF0) == NFA_DTA_CR9)))/* Patch is only for CR9. In CR8, the IUT shall acknoweledge
+                                                                 * with SYMM for DISC PDU */
     {
         /* get rid of the data pending in NFC tx queue, so DISC PDU can be sent ASAP */
         NFC_FlushData (NFC_RF_CONN_ID);
@@ -931,7 +936,8 @@ void llcp_link_check_send_data (void)
     */
     llcp_link_check_congestion ();
 
-    if(llcp_cb.lcb.symm_state == LLCP_LINK_SYMM_LOCAL_XMIT_NEXT)
+    if(llcp_cb.lcb.symm_state == LLCP_LINK_SYMM_LOCAL_XMIT_NEXT ||
+                    (appl_dta_mode_flag && llcp_cb.lcb.link_state == LLCP_LINK_STATE_DEACTIVATING))
     {
         LLCP_TRACE_DEBUG0 ("llcp_link_check_send_data () in state of LLCP_LINK_SYMM_LOCAL_XMIT_NEXT");
 
@@ -1378,7 +1384,10 @@ static void llcp_link_proc_rx_data (BT_HDR *p_msg)
         {
             /* this indicates that DISC PDU had been sent out to peer */
             /* initiator may wait for SYMM PDU */
-            llcp_link_process_link_timeout ();
+            if(appl_dta_mode_flag == 0x01)
+                llcp_util_send_disc (LLCP_SAP_LM, LLCP_SAP_LM);
+             else
+                 llcp_link_process_link_timeout ();
         }
         else
         {

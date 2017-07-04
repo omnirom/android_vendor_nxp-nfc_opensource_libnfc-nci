@@ -84,7 +84,7 @@ static void rw_t2t_proc_data (UINT8 conn_id, tNFC_DATA_CEVT *p_data)
     BOOLEAN                 b_notify    = TRUE;
     BOOLEAN                 b_release   = TRUE;
     UINT8                   *p;
-    tRW_READ_DATA           evt_data = {0, };
+    tRW_READ_DATA           evt_data = {0, NULL};
     tT2T_CMD_RSP_INFO       *p_cmd_rsp_info = (tT2T_CMD_RSP_INFO *) rw_cb.tcb.t2t.p_cmd_rsp_info;
     tRW_DETECT_NDEF_DATA    ndef_data;
 #if (BT_TRACE_VERBOSE == TRUE)
@@ -339,12 +339,6 @@ void rw_t2t_conn_cback (UINT8 conn_id, tNFC_CONN_EVT event, tNFC_CONN *p_data)
                 GKI_freebuf ((BT_HDR *) (p_data->data.p_data));
                 p_data->data.p_data = NULL;
             }
-        }
-        else if((p_data != NULL) && (p_data->data.p_data != NULL))
-        {
-        /* Free the response buffer in case of invalid response*/
-            GKI_freebuf((BT_HDR *) (p_data->data.p_data));
-            p_data->data.p_data = NULL;
         }
         /* Data event with error status...fall through to NFC_ERROR_CEVT case */
 
