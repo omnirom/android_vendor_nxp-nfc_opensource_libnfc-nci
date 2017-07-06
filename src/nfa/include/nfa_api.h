@@ -98,6 +98,10 @@
 #define NFA_STATUS_BAD_LENGTH           NFC_STATUS_BAD_LENGTH     /* data len exceeds MIU                             */
 #define NFA_STATUS_BAD_HANDLE           NFC_STATUS_BAD_HANDLE     /* invalid handle                                   */
 #define NFA_STATUS_CONGESTED            NFC_STATUS_CONGESTED      /* congested                                        */
+#if (NXP_EXTNS == TRUE)
+#define NFA_STATUS_WIRED_SESSION_ABORTED  NFC_STATUS_WIRED_SESSION_ABORTED  /* WIRED_SESSION_ABORTED error */
+#define NFA_STATUS_ALREADY_INITIALIZED  NFC_STATUS_ALREADY_INITIALIZED
+#endif
 typedef UINT8 tNFA_STATUS;
 
 /* Handle for NFA registrations and connections */
@@ -147,6 +151,7 @@ typedef UINT8 tNFA_TECHNOLOGY_MASK;
 #define NFA_PROTOCOL_T3BT       NFC_PROTOCOL_T3BT
 #define NFA_NORMAL_BOOT_MODE    NFC_NORMAL_BOOT_MODE
 #define NFA_FAST_BOOT_MODE      NFC_FAST_BOOT_MODE
+#define NFA_OSU_BOOT_MODE       NFC_OSU_BOOT_MODE
 #endif
 #define NFA_PROTOCOL_INVALID    0xFF
 #define NFA_MAX_NUM_PROTOCOLS   8
@@ -276,10 +281,12 @@ typedef void (tNFA_DM_CBACK) (UINT8 event, tNFA_DM_CBACK_DATA *p_data);
 /* NFA Enable DTA Type Mode */
 typedef enum
 {
-    NFA_DTA_DEFAULT_MODE=0,
-    NFA_DTA_LLCP_MODE,
-    NFA_DTA_SNEP_MODE,
-    NFA_DTA_HCEF_MODE
+    NFA_DTA_DEFAULT_MODE= 0x00000001,
+    NFA_DTA_LLCP_MODE   = 0x00000002,
+    NFA_DTA_SNEP_MODE   = 0x00000003,
+    NFA_DTA_HCEF_MODE   = 0x00000004,
+    NFA_DTA_CR8 = 0x00000080,
+    NFA_DTA_CR9 = 0x00000090
 }tNFA_eDtaModes;
 typedef struct
 {
@@ -335,8 +342,10 @@ typedef struct
 #define NFA_CE_ESE_LISTEN_CONFIGURED_EVT        40  /* ESE Listen configured                        */
 #define NFA_ACTIVATED_UPDATE_EVT                41  /* Activated intf for updating the   tech variables */
 #define NFA_RECOVERY_EVT                        42  /*Recovery*/
-#endif
+#if(NXP_NFCC_ESE_UICC_CONCURRENT_ACCESS_PROTECTION == TRUE)
 #define NFA_PASSIVE_LISTEN_DISABLED_EVT         44  /* Passive Listening disabled event                     */
+#endif
+#endif
 /* NFC deactivation type */
 #define NFA_DEACTIVATE_TYPE_IDLE        NFC_DEACTIVATE_TYPE_IDLE
 #define NFA_DEACTIVATE_TYPE_SLEEP       NFC_DEACTIVATE_TYPE_SLEEP
@@ -988,6 +997,7 @@ NFC_API extern tNFA_STATUS NFA_EnableListening (void);
 *******************************************************************************/
 NFC_API extern tNFA_STATUS NFA_DisableListening (void);
 
+#if((NXP_EXTNS == TRUE) && (NXP_NFCC_ESE_UICC_CONCURRENT_ACCESS_PROTECTION == TRUE))
 /*******************************************************************************
 **
 ** Function         NFA_DisablePassiveListening
@@ -1004,6 +1014,7 @@ NFC_API extern tNFA_STATUS NFA_DisableListening (void);
 **
 *******************************************************************************/
 NFC_API extern tNFA_STATUS NFA_DisablePassiveListening (void);
+#endif
 
 /*******************************************************************************
 **
@@ -1417,10 +1428,38 @@ NFC_API extern void  NFA_EnableDtamode (tNFA_eDtaModes eDtaMode);
 **
 *******************************************************************************/
 NFC_API extern tNFA_MW_VERSION NFA_GetMwVersion ();
+
+/*******************************************************************************
+**
+** Function         NFA_checkNfcStateBusy()
+**
+** Description      This function returns whether NFC process is busy or not.
+**
+** Returns          if Nfc state busy return true otherwise false.
+**
++*******************************************************************************/
+NFC_API extern BOOLEAN NFA_checkNfcStateBusy();
+
 #if(NFC_NXP_STAT_DUAL_UICC_EXT_SWITCH == TRUE)
 NFC_API extern void NFA_EE_HCI_Control(BOOLEAN mode);
 NFC_API extern tNFA_STATUS NFA_ResetNfcc();
 #endif
+
+#if(NFC_NXP_STAT_DUAL_UICC_WO_EXT_SWITCH == TRUE)
+/*******************************************************************************
+**
+** Function:        NFA_SetPreferredUiccId
+**
+** Description:     Set Preferred Uicc ID
+**                  0x02 - UICC1
+**                  0x81 - UICC2
+**
+** Returns:         none:
+**
+*******************************************************************************/
+NFC_API extern void NFA_SetPreferredUiccId(UINT8 uicc_id);
+#endif
+
 #endif
 #ifdef __cplusplus
 }
