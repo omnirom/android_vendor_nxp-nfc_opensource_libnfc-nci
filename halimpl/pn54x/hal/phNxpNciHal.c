@@ -63,6 +63,7 @@ static uint8_t read_failed_disable_nfc = FALSE;
 #endif
 static uint8_t pwr_link_required = FALSE;
 static uint8_t config_access = FALSE;
+static uint8_t config_success = true;
 static NFCSTATUS phNxpNciHal_FwDwnld(void);
 static NFCSTATUS phNxpNciHal_SendCmd(uint8_t cmd_len, uint8_t* pcmd_buff);
 static void phNxpNciHal_check_delete_nfaStorage_DHArea();
@@ -701,6 +702,11 @@ int phNxpNciHal_open(nfc_stack_callback_t *p_cback, nfc_stack_data_callback_t *p
     static uint8_t cmd_init_nci[] = {0x20,0x01,0x00};
     /*NCI_RESET_CMD*/
     static uint8_t cmd_reset_nci[] = {0x20,0x00,0x01,0x00};
+
+    if (nxpncihal_ctrl.halStatus == HAL_STATUS_OPEN) {
+        NXPLOG_NCIHAL_E("phNxpNciHal_open already open");
+        return NFCSTATUS_SUCCESS;
+    }
     /* reset config cache */
     resetNxpConfig();
 
@@ -904,6 +910,9 @@ int phNxpNciHal_write(uint16_t data_len, const uint8_t *p_data)
 {
     NFCSTATUS status = NFCSTATUS_FAILED;
     static phLibNfc_Message_t msg;
+    if (nxpncihal_ctrl.halStatus != HAL_STATUS_OPEN) {
+        return NFCSTATUS_FAILED;
+    }
     /* hard coded offsets in phNxpNciHal_print_packet */
     const uint16_t NCI_PRINT_OFFSET = 6;
 
@@ -1241,6 +1250,7 @@ int phNxpNciHal_core_initialized(uint8_t* p_core_init_rsp_params)
 #endif
     static uint8_t swp_switch_timeout_cmd[] = {0x20, 0x02, 0x06, 0x01, 0xA0, 0xF3, 0x02, 0x00, 0x00};
 
+    config_success = true;
     uint8_t *buffer = NULL;
     unsigned long bufflen = 260;
     long retlen = 0;
@@ -1264,7 +1274,9 @@ int phNxpNciHal_core_initialized(uint8_t* p_core_init_rsp_params)
     static uint8_t cmd_reset_nci[] = {0x20,0x00,0x01,0x00}; //keep configuration
     /* reset config cache */
     static uint8_t retry_core_init_cnt;
-
+    if (nxpncihal_ctrl.halStatus != HAL_STATUS_OPEN) {
+        return NFCSTATUS_FAILED;
+    }
     if((*p_core_init_rsp_params > 0) && (*p_core_init_rsp_params < 4)) //initializing for recovery.
     {
 retry_core_init:
@@ -2280,6 +2292,7 @@ invoke_callback:
                     nxpncihal_ctrl.rx_data_len, nxpncihal_ctrl.p_rx_data);
         }
     }
+    if (config_success == false) return NFCSTATUS_FAILED;
 /* This code is moved to JNI
 #ifdef PN547C2_CLOCK_SETTING
     if (isNxpConfigModified())
@@ -2728,6 +2741,11 @@ int phNxpNciHal_close(void)
     uint8_t ptr                         = 4;
     unsigned long uiccListenMask        = 0x00;
 
+    if (nxpncihal_ctrl.halStatus == HAL_STATUS_CLOSE) {
+        NXPLOG_NCIHAL_E("phNxpNciHal_close is already closed, ignoring close");
+        return NFCSTATUS_FAILED;
+    }
+
     if (!(GetNxpNumValue(NAME_NXP_UICC_LISTEN_TECH_MASK, &uiccListenMask, sizeof(uiccListenMask))))
     {
         uiccListenMask = 0x07;
@@ -3013,6 +3031,10 @@ int phNxpNciHal_power_cycle(void)
 
     NFCSTATUS status = NFCSTATUS_FAILED;
 
+    if (nxpncihal_ctrl.halStatus != HAL_STATUS_OPEN) {
+        NXPLOG_NCIHAL_D("Power Cycle failed due to hal status not open");
+        return NFCSTATUS_FAILED;
+    }
     status = phTmlNfc_IoCtl(phTmlNfc_e_ResetDevice);
 
     if(NFCSTATUS_SUCCESS == status)
@@ -3790,8 +3812,8 @@ if((p_rx_data[2])&&(config_access == TRUE))
     {
         if(p_rx_data[3]!=NFCSTATUS_SUCCESS)
         {
-            NXPLOG_NCIHAL_W("Invalid Data from config file . Aborting..");
-            phNxpNciHal_close();
+            NXPLOG_NCIHAL_W("Invalid Data from config file.");
+            config_success = false;
         }
     }
 }
