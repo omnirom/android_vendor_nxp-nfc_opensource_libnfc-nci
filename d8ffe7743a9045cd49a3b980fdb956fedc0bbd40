@@ -36,6 +36,24 @@
     },
     {
       "key": {
+        "uuid": "1209e93c_b8d172f7",
+        "filename": "halimpl/pn54x/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 61,
+      "author": {
+        "id": 1001070
+      },
+      "writtenOn": "2017-07-25T11:22:28Z",
+      "side": 1,
+      "message": "well in the tag new tag BOARD_NFC_CHIPSET is removed... so my fault... will fix",
+      "parentUuid": "3e738059_0090a0ce",
+      "revId": "d8ffe7743a9045cd49a3b980fdb956fedc0bbd40",
+      "serverId": "56841c99-7c94-43d4-bf0b-cb4707e66d55",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "4d1b7cd5_7c4d2719",
         "filename": "halimpl/pn54x/Android.mk",
         "patchSetId": 1
