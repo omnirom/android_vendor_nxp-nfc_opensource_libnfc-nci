@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "3e738059_0090a0ce",
+        "filename": "halimpl/pn54x/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 61,
+      "author": {
+        "id": 1000026
+      },
+      "writtenOn": "2017-07-25T11:20:20Z",
+      "side": 1,
+      "message": "stupids! that will kill any selection made above and overrule with  PN548C2 again",
+      "revId": "d8ffe7743a9045cd49a3b980fdb956fedc0bbd40",
+      "serverId": "56841c99-7c94-43d4-bf0b-cb4707e66d55",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "4d1b7cd5_7c4d2719",
+        "filename": "halimpl/pn54x/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 64,
+      "author": {
+        "id": 1000026
+      },
+      "writtenOn": "2017-07-25T11:20:20Z",
+      "side": 1,
+      "message": "this else must go!",
+      "revId": "d8ffe7743a9045cd49a3b980fdb956fedc0bbd40",
+      "serverId": "56841c99-7c94-43d4-bf0b-cb4707e66d55",
+      "unresolved": false
+    }
+  ]
+}
