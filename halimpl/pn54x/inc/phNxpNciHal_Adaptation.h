@@ -67,6 +67,7 @@ typedef union {
     uint8_t           halType;
     nfc_nci_ExtnCmd_t nciCmd;
     uint32_t          timeoutMilliSec;
+    long              nfcServicePid;
 }InputData_t;
 /*
  * nfc_nci_ExtnInputData_t :Apart from InputData_t, there are context data
@@ -131,17 +132,17 @@ typedef struct {
 
 /* NXP HAL functions */
 
-int phNxpNciHal_open(nfc_stack_callback_t *p_cback,
-        nfc_stack_data_callback_t *p_data_cback);
-int phNxpNciHal_write(uint16_t data_len, const uint8_t *p_data);
-int phNxpNciHal_ioctl(long arg, void *p_data);
+int phNxpNciHal_open(nfc_stack_callback_t* p_cback,
+                     nfc_stack_data_callback_t* p_data_cback);
+int phNxpNciHal_write(uint16_t data_len, const uint8_t* p_data);
+int phNxpNciHal_ioctl(long arg, void* p_data);
 int phNxpNciHal_core_initialized(uint8_t* p_core_init_rsp_params);
 int phNxpNciHal_pre_discover(void);
 int phNxpNciHal_close(void);
 int phNxpNciHal_control_granted(void);
 int phNxpNciHal_power_cycle(void);
-int phNxpNciHal_MinOpen(nfc_stack_callback_t *p_cback,
-        nfc_stack_data_callback_t *p_data_cback);
+int phNxpNciHal_MinOpen(nfc_stack_callback_t* p_cback,
+                        nfc_stack_data_callback_t* p_data_cback);
 int phNxpNciHal_Minclose(void);
 int phNxpNciHal_getFWDownloadFlag(uint8_t* fwDnldRequest);
 #endif /* _PHNXPNCIHAL_ADAPTATION_H_ */
