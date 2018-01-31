@@ -135,6 +135,7 @@ static NFCSTATUS phNxpNciHal_CheckRFCmdRespStatus();
 int check_config_parameter();
 static NFCSTATUS phNxpNciHal_uicc_baud_rate();
 
+//static tNfc_featureList phNxpNciHal_getFeatureList();
 /******************************************************************************
  * Function         phNxpNciHal_client_thread
  *
@@ -548,6 +549,7 @@ int phNxpNciHal_MinOpen(nfc_stack_callback_t* p_cback,
         } while (init_retry_cnt < 0x03);
       }
     }
+    pthread_attr_destroy(&attr);
   }
   CONCURRENCY_UNLOCK();
   init_retry_cnt = 0;
@@ -877,12 +879,12 @@ int phNxpNciHal_write(uint16_t data_len, const uint8_t* p_data) {
   }
 
   /* Create local copy of cmd_data */
-  memcpy(nxpncihal_ctrl.p_cmd_data, p_data, data_len);
   nxpncihal_ctrl.cmd_len = data_len;
   if (nxpncihal_ctrl.cmd_len > NCI_MAX_DATA_LEN) {
     NXPLOG_NCIHAL_D("cmd_len exceeds limit NCI_MAX_DATA_LEN");
     goto clean_and_return;
   }
+  memcpy(nxpncihal_ctrl.p_cmd_data, p_data, data_len);
 #ifdef P2P_PRIO_LOGIC_HAL_IMP
   /* Specific logic to block RF disable when P2P priority logic is busy */
   if (p_data[0] == 0x21 && p_data[1] == 0x06 && p_data[2] == 0x01 &&
@@ -1742,21 +1744,19 @@ int phNxpNciHal_core_initialized(uint8_t* p_core_init_rsp_params) {
             NXPLOG_NCIHAL_E("request_EEPROM error occured %d", status);
             NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
         }
-        if(nfcFL.nfccFL._NFC_NXP_STAT_DUAL_UICC_WO_EXT_SWITCH) {
-            if ((rc > 0) && (strncmp(nq_chipid, NQ220, PROPERTY_VALUE_MAX) != 0) && (strncmp(nq_chipid, NQ210, PROPERTY_VALUE_MAX) != 0)) {
-                /*Read SWP1A data*/
-                memset(&swp_intf_info, 0, sizeof(swp_intf_info));
-                swp_intf_info.request_mode = GET_EEPROM_DATA;
-                swp_intf_info.request_type = EEPROM_SWP1A_INTF;
-                swp_intf_info.buffer = &swp1A_intf_status;
-                swp_intf_info.bufflen = sizeof(uint8_t);
-                status = request_EEPROM(&swp_intf_info);
-                if (status == NFCSTATUS_OK)
-                    swp_info_buff[1] = swp1A_intf_status;
-                else {
-                    NXPLOG_NCIHAL_E("request_EEPROM error occured %d", status);
-                    NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
-                }
+        if ((nfcFL.chipType == pn551) || (nfcFL.chipType == pn553) || (nfcFL.chipType == pn557)) {
+            /*Read SWP1A data*/
+            memset(&swp_intf_info, 0, sizeof(swp_intf_info));
+            swp_intf_info.request_mode = GET_EEPROM_DATA;
+            swp_intf_info.request_type = EEPROM_SWP1A_INTF;
+            swp_intf_info.buffer = &swp1A_intf_status;
+            swp_intf_info.bufflen = sizeof(uint8_t);
+            status = request_EEPROM(&swp_intf_info);
+            if (status == NFCSTATUS_OK)
+                swp_info_buff[1] = swp1A_intf_status;
+            else {
+                NXPLOG_NCIHAL_E("request_EEPROM error occured %d", status);
+                NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
             }
         }
         phNxpNci_EEPROM_info_t mEEPROM_info = {.request_mode = 0};
@@ -1942,7 +1942,7 @@ int phNxpNciHal_core_initialized(uint8_t* p_core_init_rsp_params) {
 
   config_access = false;
   if (!((*p_core_init_rsp_params > 0) && (*p_core_init_rsp_params < 4))) {
-      if(nfcFL.nfcNxpEse == true) {
+      if(nfcFL.nfcNxpEse == true && nfcFL.eseFL._ESE_ETSI12_PROP_INIT) {
           status = phNxpNciHal_check_eSE_Session_Identity();
           if (status != NFCSTATUS_SUCCESS) {
               NXPLOG_NCIHAL_E("Session id/ SWP intf reset Failed");
@@ -2241,7 +2241,7 @@ static NFCSTATUS phNxpNciHal_check_eSE_Session_Identity(void) {
 
   if (status == NFCSTATUS_FAILED) {
     /*Disable SWP1 and 1A interfaces*/
-      if(nfcFL.nfccFL._NFC_NXP_STAT_DUAL_UICC_WO_EXT_SWITCH) {
+      if ((nfcFL.chipType == pn551) || (nfcFL.chipType == pn553) || (nfcFL.chipType == pn557)) {
           status = phNxpNciHal_send_ext_cmd(sizeof(disable_dual_swp_intf),
                   disable_dual_swp_intf);
       }
@@ -2990,6 +2990,15 @@ int phNxpNciHal_ioctl(long arg, void* p_data) {
             }
         }
       break;
+    case HAL_NFC_IOCTL_REL_DWP_WAIT:
+        if(nfcFL.nfcNxpEse) {
+            status = phTmlNfc_rel_dwpOnOff_wait(gpphTmlNfc_Context->pDevHandle);
+            NXPLOG_NCIHAL_D("HAL_NFC_IOCTL_REL_DWP_ON_OFF_WAIT retval = %d\n", status);
+            if (NFCSTATUS_SUCCESS == status) {
+                ret = 0;
+            }
+        }
+      break;
 
     case HAL_NFC_IOCTL_SET_BOOT_MODE:
       if (NULL != p_data) {
@@ -3181,8 +3190,9 @@ static void phNxpNciHal_txNfccClockSetCmd(void) {
 
 if(nfcFL.chipType == pn553) {
     static uint8_t set_clock_cmd[] = {0x20, 0x02, 0x05, 0x01, 0xA0, 0x03, 0x01, 0x08};
+    uint8_t setClkCmdLen = sizeof(set_clock_cmd);
     unsigned long  clockSource, frequency;
-    uint32_t pllSetRetryCount = 3, dpllSetRetryCount = 3;
+    uint32_t pllSetRetryCount = 3, dpllSetRetryCount = 3,setClockCmdWriteRetryCnt = 0;
     uint8_t *pCmd4PllSetting;
     uint8_t *pCmd4DpllSetting;
     uint32_t pllCmdLen, dpllCmdLen;
@@ -3286,6 +3296,12 @@ if(nfcFL.chipType == pn553) {
     switch(clockSource)
     {
         case CLK_SRC_PLL:
+            set_clock_cmd[setClkCmdLen -1] = 0x00;
+            while(status != NFCSTATUS_SUCCESS && setClockCmdWriteRetryCnt++ < MAX_RETRY_COUNT)
+            status = phNxpNciHal_send_ext_cmd(setClkCmdLen, set_clock_cmd);
+
+            status = NFCSTATUS_FAILED;
+
             while(status != NFCSTATUS_SUCCESS && pllSetRetryCount -- > 0)
                 status = phNxpNciHal_send_ext_cmd(pllCmdLen, pCmd4PllSetting);
 
@@ -3297,7 +3313,7 @@ if(nfcFL.chipType == pn553) {
             break;
 
         case CLK_SRC_XTAL:
-            status = phNxpNciHal_send_ext_cmd(sizeof(set_clock_cmd), set_clock_cmd);
+            status = phNxpNciHal_send_ext_cmd(setClkCmdLen, set_clock_cmd);
             if (status != NFCSTATUS_SUCCESS)
             {
                 NXPLOG_NCIHAL_E("XTAL clock setting failed !!");
@@ -3962,10 +3978,12 @@ tNFC_chipType configChipType(uint8_t* msg, uint16_t msg_len) {
                 break;
 
             case 0x28 :
+            case 0x48 :
                 chipType = pn548C2;
                 break;
 
             case 0x18 :
+            case 0x58 :
                 chipType = pn66T;
                 break;
 
