@@ -22,8 +22,8 @@
 #include <mutex>
 
 #include "bt_types.h"
-#include "include/debug_nfcsnoop.h"
-#include "include/ringbuffer.h"
+#include "debug_nfcsnoop.h"
+#include "ringbuffer.h"
 #include "nfc_int.h"
 #include "nfc_types.h"
 
