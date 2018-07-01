@@ -101,7 +101,7 @@ LOCAL_SRC_FILES := \
 	$(call all-c-files-under, utils) \
 	$(call all-cpp-files-under, utils) \
 	nfc_nci.c
-LOCAL_SHARED_LIBRARIES := liblog libcutils libhardware_legacy libdl
+LOCAL_SHARED_LIBRARIES := liblog libcutils libhardware_legacy libdl libhardware
 LOCAL_MODULE_TAGS := optional
 LOCAL_PROPRIETARY_MODULE := true
 LOCAL_MODULE_OWNER := nxp
