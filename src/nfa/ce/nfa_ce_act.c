@@ -19,7 +19,7 @@
  *
  *  The original Work has been changed by NXP Semiconductors.
  *
- *  Copyright (C) 2015 NXP Semiconductors
+ *  Copyright (C) 2015-2018 NXP Semiconductors
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -354,11 +354,9 @@ void nfc_ce_t3t_set_listen_params(void) {
   uint8_t tlv_size;
   uint16_t t3t_flags2_mask = 0xFFFF; /* Mask of which T3T_IDs are disabled */
   uint8_t t3t_idx = 0;
-
-#if (NXP_EXTNS == TRUE && NXP_NFCC_HCE_F == TRUE)
   uint8_t adv_Feat = 1;
-  uint8_t t3tPMM[NCI_T3T_PMM_LEN] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
-#endif
+  uint8_t t3tPMM[NCI_T3T_PMM_LEN] = {0xFF, 0xFF, 0xFF, 0xFF,
+                                     0xFF, 0xFF, 0xFF, 0xFF};
 
   /* Point to start of tlv buffer */
   p_params = tlv;
@@ -369,14 +367,15 @@ void nfc_ce_t3t_set_listen_params(void) {
         (p_cb->listen_info[i].protocol_mask & NFA_PROTOCOL_MASK_T3T)) {
       /* Set tag's system code and NFCID2 */
       UINT8_TO_STREAM(p_params, NFC_PMID_LF_T3T_ID1 + t3t_idx); /* type */
-      UINT8_TO_STREAM(p_params, NCI_PARAM_LEN_LF_T3T_ID(NFC_GetNCIVersion()));       /* length */
+      /* length */
+      UINT8_TO_STREAM(p_params, NCI_PARAM_LEN_LF_T3T_ID(NFC_GetNCIVersion()));
       /* System Code */
       UINT16_TO_BE_STREAM(p_params, p_cb->listen_info[i].t3t_system_code);
       ARRAY_TO_BE_STREAM(p_params, p_cb->listen_info[i].t3t_nfcid2,
                          NCI_RF_F_UID_LEN);
-      if(NFC_GetNCIVersion() == NCI_VERSION_2_0) {
+      if (NFC_GetNCIVersion() == NCI_VERSION_2_0) {
         ARRAY_TO_BE_STREAM(p_params, p_cb->listen_info[i].t3t_pmm,
-                          NCI_T3T_PMM_LEN);
+                           NCI_T3T_PMM_LEN);
       }
       /* Set mask for this ID */
       t3t_flags2_mask &= ~((uint16_t)(1 << t3t_idx));
@@ -387,35 +386,32 @@ void nfc_ce_t3t_set_listen_params(void) {
   /* For NCI draft 22+, the polarity of NFC_PMID_LF_T3T_FLAGS2 is flipped */
   t3t_flags2_mask = ~t3t_flags2_mask;
 
-
-  if(nfcFL.chipType != pn547C2) {
-      NFA_TRACE_DEBUG0(" LF_T3T_FLAGS swap for NCI specification compliance");
-      t3t_flags2_mask = ((t3t_flags2_mask >> 8) | (t3t_flags2_mask << 8));
-  }
-
   UINT8_TO_STREAM(p_params, NFC_PMID_LF_T3T_FLAGS2);      /* type */
   UINT8_TO_STREAM(p_params, NCI_PARAM_LEN_LF_T3T_FLAGS2); /* length */
-#if ((NXP_EXTNS == TRUE) && (NXP_NFCC_HCE_F == TRUE))
-  // FelicaOnHost
-  UINT16_TO_BE_STREAM(p_params, t3t_flags2_mask);
-  if(NFC_GetNCIVersion() == NCI_VERSION_2_0) {
-    /*Name changed in NCI2.0*/
-     UINT8_TO_STREAM (p_params, NCI_PARAM_ID_LF_T3T_RD_ALLOWED);      /* type */
-     UINT8_TO_STREAM (p_params, NCI_PARAM_LEN_LF_T3T_RD_ALLOWED);     /* length */
-  } else {
-    UINT8_TO_STREAM (p_params, NCI_PARAM_ID_LF_CON_ADV_FEAT);      /* type */
-    UINT8_TO_STREAM (p_params, NCI_PARAM_LEN_LF_CON_ADV_FEAT);     /* length */
-  }
-  UINT8_TO_STREAM (p_params, adv_Feat);
-
-  if(NFC_GetNCIVersion() != NCI_VERSION_2_0) {
-    UINT8_TO_STREAM (p_params, NCI_PARAM_ID_LF_T3T_PMM);      /* type */
-    UINT8_TO_STREAM (p_params, NCI_PARAM_LEN_LF_T3T_PMM);     /* length */
-  }
-#else
   /* Mask of IDs to disable listening */
-  UINT16_TO_STREAM(p_params, t3t_flags2_mask);
-#endif
+  if(nfcFL.chipType != pn547C2) {
+    UINT16_TO_STREAM(p_params, t3t_flags2_mask);
+  }
+  else
+  {
+    UINT16_TO_BE_STREAM(p_params, t3t_flags2_mask);
+  }
+
+  if (NFC_GetNCIVersion() == NCI_VERSION_2_0) {
+    /*Name changed in NCI2.0*/
+    UINT8_TO_STREAM(p_params, NCI_PARAM_ID_LF_T3T_RD_ALLOWED);  /* type */
+    UINT8_TO_STREAM(p_params, NCI_PARAM_LEN_LF_T3T_RD_ALLOWED); /* length */
+  } else {
+    UINT8_TO_STREAM(p_params, NCI_PARAM_ID_LF_CON_ADV_FEAT);  /* type */
+    UINT8_TO_STREAM(p_params, NCI_PARAM_LEN_LF_CON_ADV_FEAT); /* length */
+  }
+  UINT8_TO_STREAM(p_params, adv_Feat);
+
+  if (NFC_GetNCIVersion() != NCI_VERSION_2_0) {
+    UINT8_TO_STREAM(p_params, NCI_PARAM_ID_LF_T3T_PMM);  /* type */
+    UINT8_TO_STREAM(p_params, NCI_PARAM_LEN_LF_T3T_PMM); /* length */
+    ARRAY_TO_BE_STREAM(p_params, t3tPMM, NCI_T3T_PMM_LEN);
+  }
   tlv_size = (uint8_t)(p_params - tlv);
   if (appl_dta_mode_flag == 0x01) {
     nfa_dm_cb.eDtaMode |= NFA_DTA_HCEF_MODE;
@@ -1211,7 +1207,8 @@ bool nfa_ce_deactivate_ntf(tNFA_CE_MSG* p_ce_msg) {
                ) &&
           (i == p_cb->idx_cur_active)) {
         conn_evt.deactivated.type = deact_type;
-        (*p_cb->p_active_conn_cback)(NFA_DEACTIVATED_EVT, &conn_evt);
+      if (p_cb->p_active_conn_cback)
+          (*p_cb->p_active_conn_cback)(NFA_DEACTIVATED_EVT, &conn_evt);
       } else if ((p_cb->activation_params.protocol == NFA_PROTOCOL_ISO_DEP) &&
                  (p_cb->listen_info[i].protocol_mask &
                   NFA_PROTOCOL_MASK_ISO_DEP)) {
@@ -1220,12 +1217,14 @@ bool nfa_ce_deactivate_ntf(tNFA_CE_MSG* p_ce_msg) {
               NFA_CE_LISTEN_INFO_T4T_ACTIVATE_PND)) {
           if (i == NFA_CE_LISTEN_INFO_IDX_NDEF) {
             conn_evt.deactivated.type = deact_type;
-            (*p_cb->p_active_conn_cback)(NFA_DEACTIVATED_EVT, &conn_evt);
+            if (p_cb->p_active_conn_cback)
+                (*p_cb->p_active_conn_cback)(NFA_DEACTIVATED_EVT, &conn_evt);
           } else {
             conn_evt.ce_deactivated.handle =
                 NFA_HANDLE_GROUP_CE | ((tNFA_HANDLE)i);
             conn_evt.ce_deactivated.type = deact_type;
-            (*p_cb->p_active_conn_cback)(NFA_CE_DEACTIVATED_EVT, &conn_evt);
+            if (p_cb->p_active_conn_cback)
+                (*p_cb->p_active_conn_cback)(NFA_CE_DEACTIVATED_EVT, &conn_evt);
           }
         }
       } else if ((p_cb->activation_params.protocol == NFA_PROTOCOL_T3T) &&
@@ -1237,12 +1236,14 @@ bool nfa_ce_deactivate_ntf(tNFA_CE_MSG* p_ce_msg) {
 #endif
           if (i == NFA_CE_LISTEN_INFO_IDX_NDEF) {
             conn_evt.deactivated.type = deact_type;
-            (*p_cb->p_active_conn_cback)(NFA_DEACTIVATED_EVT, &conn_evt);
+            if (p_cb->p_active_conn_cback)
+                (*p_cb->p_active_conn_cback)(NFA_DEACTIVATED_EVT, &conn_evt);
           } else {
             conn_evt.ce_deactivated.handle =
                 NFA_HANDLE_GROUP_CE | ((tNFA_HANDLE)i);
             conn_evt.ce_deactivated.type = deact_type;
-            (*p_cb->p_active_conn_cback)(NFA_CE_DEACTIVATED_EVT, &conn_evt);
+            if (p_cb->p_active_conn_cback)
+                (*p_cb->p_active_conn_cback)(NFA_CE_DEACTIVATED_EVT, &conn_evt);
           }
 #if (NXP_EXTNS == TRUE)
         }
@@ -1547,7 +1548,7 @@ bool nfa_ce_api_reg_listen(tNFA_CE_MSG* p_ce_msg) {
         memcpy(p_cb->listen_info[listen_info_idx].t3t_nfcid2,
                p_ce_msg->reg_listen.nfcid2, NCI_RF_F_UID_LEN);
         memcpy(p_cb->listen_info[listen_info_idx].t3t_pmm,
-                       p_ce_msg->reg_listen.t3tPmm, NCI_T3T_PMM_LEN);
+               p_ce_msg->reg_listen.t3tPmm, NCI_T3T_PMM_LEN);
         break;
 
 #if (NFC_NFCEE_INCLUDED == true)

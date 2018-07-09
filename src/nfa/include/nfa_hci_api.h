@@ -19,7 +19,7 @@
  *
  *  The original Work has been changed by NXP Semiconductors.
  *
- *  Copyright (C) 2015 NXP Semiconductors
+ *  Copyright (C) 2015-2018 NXP Semiconductors
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -110,6 +110,7 @@
 #define NFA_HCI_HOST_TYPE_LIST_READ_EVT 0x17
 #define NFA_HCI_CONFIG_DONE_EVT \
   0x18 /* Configure NFCEE                              */
+#define NFA_HCI_EE_RECOVERY_EVT 0x19
 #endif
 typedef uint8_t tNFA_HCI_EVT;
 
@@ -137,6 +138,10 @@ typedef uint8_t tNFA_HCI_EVT;
 /* NFA HCI PIPE states */
 #define NFA_HCI_PIPE_CLOSED 0x00 /* Pipe is closed */
 #define NFA_HCI_PIPE_OPENED 0x01 /* Pipe is opened */
+
+ /* HCI Recovery status*/
+ #define NFA_HCI_EE_RECOVERY_STARTED 0x01
+ #define NFA_HCI_EE_RECOVERY_COMPLETED 0x02
 
 typedef uint8_t tNFA_HCI_PIPE_STATE;
 /* Dynamic pipe control block */
@@ -312,6 +317,11 @@ typedef struct {
   tNFA_STATUS status; /* Status for ETSI12 config for NFCEE*/
 } tNFA_HCI_CONFIG_RSP_RCVD;
 #endif
+typedef struct {
+  tNFA_STATUS status;     /* Status of command on Admin pipe */
+  uint8_t host;
+} tNFA_HCI_EE_RECOVERY_EVT;
+/* Data for tNFA_HCI_CONFIG_RSP_RCVD */
 /* Union of all hci callback structures */
 typedef union {
   tNFA_HCI_REGISTER hci_register;          /* NFA_HCI_REGISTER_EVT           */
@@ -342,6 +352,7 @@ typedef union {
 #if (NXP_EXTNS == TRUE)
   tNFA_HCI_ADMIN_RSP_RCVD admin_rsp_rcvd;   /* NFA_HCI_ADMIN_RSP_RCVD         */
   tNFA_HCI_CONFIG_RSP_RCVD config_rsp_rcvd; /* NFA_HCI_CONFIG_RSP_RCVD       */
+  tNFA_HCI_EE_RECOVERY_EVT ee_recovery;
 #endif
 } tNFA_HCI_EVT_DATA;
 
@@ -695,6 +706,16 @@ void NFA_HciDebug(uint8_t action, uint8_t size, uint8_t* p_data);
 #if (NXP_EXTNS == TRUE)
 extern tNFA_STATUS NFA_HciSendHostTypeListCommand(tNFA_HANDLE hci_handle);
 extern tNFA_STATUS NFA_HciConfigureNfceeETSI12();
+/*******************************************************************************
+**
+** Function         NFA_IsPipeStatusNotCorrect
+**
+** Description      Checks and resets pipe status
+**
+** Returns          TRUE/FALSE
+**
+*******************************************************************************/
+extern bool NFA_IsPipeStatusNotCorrect();
 #endif
 #if (NXP_EXTNS == TRUE)
 /*******************************************************************************

@@ -55,7 +55,7 @@ endif
 
 #### Select the CHIP ####
 ifeq ($(strip $(NQ3XX_PRESENT)),true)
-NXP_CHIP_TYPE := $(PN553)
+NXP_CHIP_TYPE := $(PN557)
 else
 NXP_CHIP_TYPE := $(PN548C2)
 endif
@@ -101,7 +101,7 @@ LOCAL_SRC_FILES := \
 	$(call all-c-files-under, utils) \
 	$(call all-cpp-files-under, utils) \
 	nfc_nci.c
-LOCAL_SHARED_LIBRARIES := liblog libcutils libhardware_legacy libdl
+LOCAL_SHARED_LIBRARIES := liblog libcutils libhardware_legacy libdl libhardware
 LOCAL_MODULE_TAGS := optional
 LOCAL_PROPRIETARY_MODULE := true
 LOCAL_MODULE_OWNER := nxp
@@ -140,6 +140,13 @@ include $(BUILD_SHARED_LIBRARY)
 include $(CLEAR_VARS)
 LOCAL_MODULE       := libnfc-brcm.conf
 LOCAL_MODULE_TAGS  := optional
+LOCAL_MODULE_CLASS := ETC
+LOCAL_MODULE_PATH  := $(TARGET_OUT_VENDOR_ETC)
+LOCAL_SRC_FILES    := $(LOCAL_MODULE)
+include $(BUILD_PREBUILT)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE       := libnfc-brcm_NCI2_0.conf
 LOCAL_MODULE_CLASS := ETC
 LOCAL_MODULE_PATH  := $(TARGET_OUT_VENDOR_ETC)
 LOCAL_SRC_FILES    := $(LOCAL_MODULE)
