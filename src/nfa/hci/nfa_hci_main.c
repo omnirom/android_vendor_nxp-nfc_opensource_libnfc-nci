@@ -2,7 +2,7 @@
  *  Copyright (c) 2016, The Linux Foundation. All rights reserved.
  *  Not a Contribution.
  *
- *  Copyright (C) 2015 NXP Semiconductors
+ *  Copyright (C) 2015-2018 NXP Semiconductors
  *  The original Work has been changed by NXP Semiconductors.
  *
  *  Copyright (C) 2010-2014 Broadcom Corporation
@@ -243,18 +243,28 @@ void nfa_hci_ee_info_cback(tNFA_EE_DISC_STS status) {
           NFA_EeGetInfo(&nfa_hci_cb.num_nfcee, nfa_hci_cb.ee_info);
           nfa_hci_enable_one_nfcee();
         }
-        else if(nfa_hci_cb.hci_state == NFA_HCI_STATE_NFCEE_ENABLE)
+        else if((nfa_hci_cb.hci_state == NFA_HCI_STATE_NFCEE_ENABLE) &&
+          (nfa_hci_cb.nfcee_cfg.config_nfcee_state == NFA_HCI_INIT_NFCEE_CONFIG))
         {
             nfa_hci_api_config_nfcee(nfa_hci_cb.current_nfcee);
         }
       break;
     case NFA_EE_RECOVERY:
         /*NFCEE recovery in progress*/
-        if (!((nfa_hci_cb.hci_state == NFA_HCI_STATE_WAIT_NETWK_ENABLE) ||
+        if(nfa_hci_cb.hci_state == NFA_HCI_STATE_EE_RECOVERY) {
+            NFA_TRACE_DEBUG1("nfa_hci_ee_info_cback (): %d nfa_hci_cb.hci_state already in EE Recovery", nfa_hci_cb.hci_state);
+        }
+        else if (!((nfa_hci_cb.hci_state == NFA_HCI_STATE_WAIT_NETWK_ENABLE) ||
             (nfa_hci_cb.hci_state == NFA_HCI_STATE_RESTORE_NETWK_ENABLE))) {
           if (NFA_DM_RFST_DISCOVERY == nfa_dm_cb.disc_cb.disc_state)
             nfa_hci_cb.nfcee_cfg.discovery_stopped = nfa_dm_act_stop_rf_discovery(NULL);
+          tNFA_HCI_EVT_DATA evt_data;
+          evt_data.ee_recovery.status = NFA_HCI_EE_RECOVERY_STARTED;
+          nfa_hciu_send_to_all_apps(NFA_HCI_EE_RECOVERY_EVT, &evt_data);
+          nfa_hci_release_transcieve();
           if(NFC_NfceeDiscover(true) == NFC_STATUS_FAILED){
+              evt_data.ee_recovery.status = NFA_HCI_EE_RECOVERY_COMPLETED;
+              nfa_hciu_send_to_all_apps(NFA_HCI_EE_RECOVERY_EVT, &evt_data);
             if(nfa_hci_cb.nfcee_cfg.discovery_stopped == true) {
               nfa_dm_act_start_rf_discovery(NULL);
               nfa_hci_cb.nfcee_cfg.discovery_stopped = false;
@@ -289,6 +299,7 @@ void nfa_hci_init(void) {
   nfa_hci_cb.IsHciTimerChanged = false;
   nfa_hci_cb.IsWiredSessionAborted = false;
   nfa_hci_cb.IsLastEvtAbortFailed = false;
+  nfa_hci_cb.IsApduPipeStatusNotCorrect = false;
   read_config_timeout_param_values();
 #endif
   /* register message handler on NFA SYS */
@@ -773,10 +784,12 @@ void nfa_hci_enable_one_nfcee(void) {
           nfa_hci_cb.nfcee_cfg.discovery_stopped = false;
           nfa_dm_act_start_rf_discovery(NULL);
         }
+        tNFA_HCI_EVT_DATA evt_data;
+        evt_data.ee_recovery.status = NFA_HCI_EE_RECOVERY_COMPLETED;
+        nfa_hciu_send_to_all_apps(NFA_HCI_EE_RECOVERY_EVT, &evt_data);
     }
   }
 }
-
 /*******************************************************************************
 **
 ** Function         nfa_hci_startup
@@ -793,8 +806,6 @@ void nfa_hci_startup(void) {
   uint8_t target_handle;
   uint8_t count = 0;
   bool found = false;
-
-  nfa_ee_max_ee_cfg = nfcFL.nfccFL._NFA_EE_MAX_EE_SUPPORTED;
 
   if (HCI_LOOPBACK_DEBUG) {
       /* First step in initialization is to open the admin pipe */
@@ -911,6 +922,8 @@ static void nfa_hci_sys_enable(void) {
 *******************************************************************************/
 static void nfa_hci_sys_disable(void) {
   tNFA_HCI_EVT_DATA evt_data;
+  tNFC_CONN_EVT event;
+  tNFC_CONN cData;
 
   nfa_sys_stop_timer(&nfa_hci_cb.timer);
 
@@ -920,6 +933,16 @@ static void nfa_hci_sys_disable(void) {
       if(NFC_GetNCIVersion() == NCI_VERSION_1_0) {
         nfa_hciu_send_to_all_apps(NFA_HCI_EXIT_EVT, &evt_data);
         NFC_ConnClose(nfa_hci_cb.conn_id);
+      }
+      else
+      {
+        /* HCI module deregister should be triggered to sto the nfa_sys_main timer,
+        so faking a connection close event */
+        NFA_TRACE_ERROR0("Fake NFC_CONN_CLOSE_CEVT triggered");
+        cData.data.status = NFA_STATUS_OK;
+        cData.data.p_data = NULL;
+        event = NFC_CONN_CLOSE_CEVT;
+        nfa_hci_conn_cback(nfa_hci_cb.conn_id, event, &cData);
       }
       return;
     }
@@ -943,7 +966,7 @@ static void nfa_hci_sys_disable(void) {
 void nfa_hci_conn_cback(uint8_t conn_id, tNFC_CONN_EVT event,
                         tNFC_CONN* p_data) {
   uint8_t* p;
-  NFC_HDR* p_pkt = (NFC_HDR*)p_data->data.p_data;
+  NFC_HDR* p_pkt = NULL;
   uint8_t chaining_bit;
   uint8_t pipe;
   uint16_t pkt_len;
@@ -1025,6 +1048,9 @@ void nfa_hci_conn_cback(uint8_t conn_id, tNFC_CONN_EVT event,
       nfa_ee_nci_conn(&p_msgdata);
 #endif
   }
+
+  if(event == NFC_DATA_CEVT)
+      p_pkt = (NFC_HDR*)p_data->data.p_data;
 
   if ((event != NFC_DATA_CEVT) || (p_pkt == NULL)) return;
 
@@ -1477,7 +1503,7 @@ void nfa_hci_rsp_timeout(tNFA_HCI_EVENT_DATA* p_evt_data) {
             NFC_FlushData(nfa_hci_cb.conn_id);
             msg_len = (((nfa_hci_cb.hci_packet_len + 1) % 2) == 0) ? 1 : 2;
             NFA_TRACE_DEBUG1("NxpNci: Queue is not empty: %d", msg_len);
-            if ((p_buf = (NFC_HDR*)GKI_getpoolbuf(NFC_RW_POOL_ID)) != NULL) {
+            if ((p_buf = (NFC_HDR*)GKI_getpoolbuf(NFC_WIRED_POOL_ID)) != NULL) {
               p_buf->offset = NCI_MSG_OFFSET_SIZE + NCI_DATA_HDR_SIZE;
               p_data = (uint8_t*)(p_buf + 1) + p_buf->offset;
               *p_data++ = (NFA_HCI_NO_MESSAGE_FRAGMENTATION << 7) |
@@ -1496,7 +1522,7 @@ void nfa_hci_rsp_timeout(tNFA_HCI_EVENT_DATA* p_evt_data) {
           } else if (!nfa_hci_cb.IsEventAbortSent) {
             NFC_FlushData(nfa_hci_cb.conn_id);
             /* send EVT_ABORT command */
-            if ((p_buf = (NFC_HDR*)GKI_getpoolbuf(NFC_RW_POOL_ID)) != NULL) {
+            if ((p_buf = (NFC_HDR*)GKI_getpoolbuf(NFC_WIRED_POOL_ID)) != NULL) {
               NFA_TRACE_DEBUG0("EVT_ABORT sent");
               p_buf->offset = NCI_MSG_OFFSET_SIZE + NCI_DATA_HDR_SIZE;
               p_data = (uint8_t*)(p_buf + 1) + p_buf->offset;

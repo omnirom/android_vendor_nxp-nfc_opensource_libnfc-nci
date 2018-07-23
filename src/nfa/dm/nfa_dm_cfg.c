@@ -52,14 +52,14 @@ const tNFA_DM_DISC_FREQ_CFG nfa_dm_rf_disc_freq_cfg = {
     1, /* Frequency for Proprietary Technology/B-Prime */
     1, /* Frequency for Proprietary Technology/Kovio   */
     1, /* Frequency for NFC Technology A active mode   */
-    1  /* Frequency for NFC Technology F active mode   */
+    1, /* Frequency for NFC Technology F active mode   */
+    1  /* Frequency for NFC Technology active mode     */
 };
 
 tNFA_DM_DISC_FREQ_CFG* p_nfa_dm_rf_disc_freq_cfg =
     (tNFA_DM_DISC_FREQ_CFG*)&nfa_dm_rf_disc_freq_cfg;
 
 uint8_t nfa_ee_max_ee_cfg = NFA_EE_MAX_EE_SUPPORTED;
-
 const tNCI_DISCOVER_MAPS nfa_dm_interface_mapping[NFA_DM_NUM_INTERFACE_MAP] = {
     /* Protocols that use Frame Interface do not need to be included in the
        interface mapping */
@@ -113,7 +113,7 @@ const tNFA_PROPRIETARY_CFG nfa_proprietary_cfg = {
 #else
     0x83, /* NCI_PROTOCOL_15693 */
 #endif
-#if (NXP_EXTNS == TRUE && NFC_NXP_CHIP_TYPE != PN547C2)
+#if (NXP_EXTNS == TRUE)
     0x81,
 #else
     0x8A, /* NCI_PROTOCOL_KOVIO */
@@ -123,7 +123,7 @@ const tNFA_PROPRIETARY_CFG nfa_proprietary_cfg = {
 #else
     0xFF, /* NCI_PROTOCOL_MIFARE */
 #endif
-#if (NXP_EXTNS == TRUE && NFC_NXP_CHIP_TYPE != PN547C2)
+#if (NXP_EXTNS == TRUE)
     0x70,
 #else
     0x77, /* NCI_DISCOVERY_TYPE_POLL_KOVIO */
